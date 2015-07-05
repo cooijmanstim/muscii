@@ -36,10 +36,10 @@ def infer_pitches(pitches):
         i_pitch0 = 0
         inferred_pitches[i_pitch0] = 0
     for i in xrange(i_pitch0, 0, -1):
-        inferred_pitches[i - 1] = inferred_pitches[i] - 1
+        inferred_pitches[i - 1] = inferred_pitches[i] + 1
     for i in xrange(i_pitch0 + 1, len(pitches)):
         if inferred_pitches[i] is None:
-            inferred_pitches[i] = inferred_pitches[i - 1] + 1
+            inferred_pitches[i] = inferred_pitches[i - 1] - 1
     if any(inferred_pitch != pitch
            for inferred_pitch, pitch
            in zip(inferred_pitches, pitches)
@@ -63,20 +63,25 @@ def parse_piano_roll(matrix, row_metas, t0):
             if c.isalpha():
                 name = c.lower()
                 # should be: if voices[name].get_duration() < t0, pad
+                # TODO: figure out if above comment still applies
                 if name not in voices:
                     voices[name] = mu.Sequence(notes=[], name=name)
                 last_t = voices_last_t.get(name, 0)
                 if last_t < t - 1:
-                    voices[name].append(mu.Rest(duration=t - last_t),
+                    voices[name].append(mu.Rest(duration=t - last_t - 1),
                                         try_tie=True)
                 voices_last_t[name] = t
                 voices[name].append(mu.Note(pitch=row_metas[i]["pitch"],
                                             duration=1),
                                     try_tie=c.islower())
+            elif c == "." or c.isspace():
+                pass
+            else:
+                raise ValueError()
     return voices
 
-def parse_matrix(string, beats_per_bar=4):
-    rows = [row.strip() for row in string.strip().splitlines()]
+def parse_matrix(string, transforms=[]):
+    rows = [row for row in string.splitlines() if row.strip()]
     columns = list(it.izip_longest(*rows, fillvalue=" "))
     matrix = np.array(columns, dtype="string").T
     # time starts at leftmost dot
@@ -88,5 +93,7 @@ def parse_matrix(string, beats_per_bar=4):
     row_metas = parse_rows_modifiers(matrix[:, :i_note0])
     # what comes after it is piano roll
     voices = parse_piano_roll(matrix[:, i_note0:], row_metas, i_note0 - i_t0)
-    voices = [mu.Sequence(name=k, notes=v) for k, v in voices.iteritems()]
+    for sequence in voices.itervalues():
+        for transform in transforms:
+            sequence.transform(transform)
     return voices

@@ -68,7 +68,18 @@ class Shift(Transformation):
         self.delta = delta
 
     def __call__(self, note):
-        setattr(note, self.attr, getattr(note, self.attr, self.delta))
+        if hasattr(note, self.attr):
+            setattr(note, self.attr, getattr(note, self.attr) + self.delta)
+
+class Scale(Transformation):
+    def __init__(self, attr, scale, **kwargs):
+        super(Transformation, self).__init__(**kwargs)
+        self.attr = attr
+        self.scale = scale
+
+    def __call__(self, note):
+        if hasattr(note, self.attr):
+            setattr(note, self.attr, getattr(note, self.attr) * self.scale)
 
 class Sequence(MaybeNamed, ut.DefaultEqualityMixin):
     def __init__(self, notes=[], **kwargs):
@@ -99,7 +110,7 @@ class Sequence(MaybeNamed, ut.DefaultEqualityMixin):
         for note in self.notes:
             note.transform(transformation)
 
-    def get_events(self, channel, t0):
+    def get_events(self, channel, t0=0):
         events = []
         for note in self.notes:
             events.extend(note.get_events(channel, t0))
