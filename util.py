@@ -1,5 +1,8 @@
 import re
 
+class HandlersByRegexKeyError(KeyError):
+    pass
+
 class HandlersByRegex(object):
     def __init__(self, *args, **kwargs):
         self.dikt = {}

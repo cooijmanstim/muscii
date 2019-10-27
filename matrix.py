@@ -9,9 +9,11 @@ from numpy.core.defchararray import isspace as numpy_isspace
 
 import music as mu
 import util as ut
+import drummap
 
 modifier_handlers = ut.HandlersByRegex({
     r"^=(?P<degree>[abcdefg])(?P<accidental>[b#])?(?P<octave>\d)?$": lambda **kwargs: dict(pitch=mu.get_pitch(**kwargs)),
+    r"^&(?P<instrument>\w+)$": lambda instrument: dict(pitch=drummap.pitch_by_instrument[instrument]),
 })
 
 def parse_row_modifiers(row):
@@ -19,7 +21,7 @@ def parse_row_modifiers(row):
     for modifier in row.split():
         try:
             row_info.update(modifier_handlers[modifier])
-        except KeyError:
+        except ut.HandlersByRegexKeyError:
             logger.warning("ignoring malformed row modifier %s" % repr(modifier))
             continue
     return row_info
@@ -62,25 +64,25 @@ def parse_piano_roll(matrix, row_metas, t0):
             c = matrix[i, t]
             if c.isalpha():
                 name = c.lower()
-                # should be: if voices[name].get_duration() < t0, pad
-                # TODO: figure out if above comment still applies
+                note = mu.Note(pitch=row_metas[i]["pitch"],
+                               duration=1)
                 if name not in voices:
                     voices[name] = mu.Sequence(notes=[], name=name)
-                last_t = voices_last_t.get(name, 0)
-                if last_t < t - 1:
-                    voices[name].append(mu.Rest(duration=t - last_t - 1),
+                # pad with Rests to t - 1
+                pad_duration = t - 1 - voices_last_t.get(name, 0)
+                if pad_duration > 0:
+                    voices[name].append(mu.Rest(duration=pad_duration),
                                         try_tie=True)
+                    voices_last_t[name] = t - 1
                 voices_last_t[name] = t
-                voices[name].append(mu.Note(pitch=row_metas[i]["pitch"],
-                                            duration=1),
-                                    try_tie=c.islower())
+                voices[name].append(note, try_tie=c.islower())
             elif c == "." or c.isspace():
                 pass
             else:
                 raise ValueError()
     return voices
 
-def parse_matrix(string, transforms=[]):
+def parse_matrix(string, transforms=[], names=dict()):
     rows = [row for row in string.splitlines() if row.strip()]
     columns = list(it.izip_longest(*rows, fillvalue=" "))
     matrix = np.array(columns, dtype="string").T
@@ -93,6 +95,8 @@ def parse_matrix(string, transforms=[]):
     row_metas = parse_rows_modifiers(matrix[:, :i_note0])
     # what comes after it is piano roll
     voices = parse_piano_roll(matrix[:, i_note0:], row_metas, i_note0 - i_t0)
+    voices = dict((names.get(key, key), value)
+                  for key, value in voices.iteritems())
     for sequence in voices.itervalues():
         for transform in transforms:
             sequence.transform(transform)

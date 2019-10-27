@@ -12,16 +12,6 @@ import playback as pb
 
 voice_sequences = dict()
 
-voice_sequences.update(mx.parse_matrix("""
-&WoodBlock  .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
-&Claves     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
-&Maraca     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
-&Cabasa     .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
-&PedalHihat .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
-&SideStick  .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
-&BassDrum1  .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
-"""))
-
 #   C6      D7      GM7     E-      CM7     F#      B-      B7      E       AM7     Eb-     G#      C#-     AM7     G#
 voice_sequences.update(mx.parse_matrix("""
 =a5 .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   vv  .   .   .   .   .   .   .   .   .   .   .   .   .   
@@ -51,7 +41,7 @@ voice_sequences.update(mx.parse_matrix("""
     .   .   .   .   .   .   .   wwww.   .   .   .   .   .   uuuuuuuu
 =d5 .   .   .   .   .   .   wwww.   .   .   .   .   .   .   .   .   
     .   .   .   .   .   .   .   .   .   xxxxxxxx.   xxxxxxxxxxxx.   
-=c5 .   xxxxxx  .   ww  .   .   .   .   .   .   xxxx.   .   .   xxxx
+=c5 .   xxxxxx  .   .w  .   .   .   .   .   .   xxxx.   .   .   xxxx
 =b4 .   .   . xxxxxxxxxx.   xxxxxxxxxxxx.   .   .   .   .   .   .   
     .   .   .   .   .   xxxx.   .   .   .   .   .   .   .   .   .   
 =a4 xxxx.   .   .   .   .   .   .   .   yyyyyyyy.   .   .   .   .   
@@ -74,6 +64,16 @@ voice_sequences.update(mx.parse_matrix("""
 =e3 .   .   .   zzzz.   .   .   .   zzzz.   .   .   .   .   .   .   
 """, transforms=[mu.Scale("duration", 2)]))
 
+voice_sequences["drums"] = mu.ParallelSequence(mx.parse_matrix("""
+&LowWoodBlock z   z   z   z   z   z   z   z   z   z   z   z   z   z   z   z   
+&Claves       .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   
+&Maracas      x   . x .   x   . x .   x   . x .   x   . x .   x   . x .   x   
+&Cabasa       WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+&PedalHihat   v v v v v v v v v v v v v v v v v v v v v v v v v v v v v v v v 
+&SideStick    .   u   .   u   .   u   .   u   .   u   .   u   .   u   .   u   
+&BassDrum2    t   . t .   . t t   . t .   .   t   . t .   .   t   . t .   .   
+""").values())
+
 voice_instruments = dict(
     z="pizzicato contrabass drawbar_organ",
     y="cello tuba",
@@ -81,6 +81,7 @@ voice_instruments = dict(
     w="violin french_horns",
     u="slow_violin",
     v="jazz_guitar",
+    drums="drums",
 )
 
-pb.play_voices(voice_sequences, voice_instruments)
+pb.play_voices(voice_sequences, voice_instruments, bpm=160)

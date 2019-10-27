@@ -1,4 +1,5 @@
 import copy
+import itertools as it
 
 import util as ut
 import events as ev
@@ -39,7 +40,10 @@ class MaybeNamed(object):
         super(MaybeNamed, self).__init__(**kwargs)
         self.name = name
 
-class Note(HasPitch, HasDuration, ut.DefaultEqualityMixin):
+class BaseNote(ut.DefaultEqualityMixin):
+    pass
+
+class Note(HasPitch, HasDuration, BaseNote):
     def __init__(self, **kwargs):
         super(Note, self).__init__(**kwargs)
 
@@ -106,6 +110,11 @@ class Sequence(MaybeNamed, ut.DefaultEqualityMixin):
         for note in notes:
             self.append(note)
 
+    # replace the last note with something else; used while parsing a
+    # matrix to tie consecutive notes.
+    def amend(self, fn):
+        self.notes[-1] = fn(self.notes[-1])
+
     def transform(self, transformation):
         for note in self.notes:
             note.transform(transformation)
@@ -123,6 +132,29 @@ class Sequence(MaybeNamed, ut.DefaultEqualityMixin):
     def __repr__(self):
         return "Sequence(%s)" % ", ".join((["name=%s" % self.name] if self.name else [])
                                           + list(map(repr, self.notes)))
+
+# NOTE: immutable; append etc. does not make sense. also not iterable
+class ParallelSequence(MaybeNamed, ut.DefaultEqualityMixin):
+    def __init__(self, sequences=[], **kwargs):
+        super(ParallelSequence, self).__init__(**kwargs)
+        self.sequences = list(sequences)
+
+    def transform(self, transformation):
+        for sequence in self.sequences:
+            sequence.transform(transformation)
+
+    def get_events(self, channel, t0=0):
+        events = []
+        for sequence in self.sequences:
+            events.extend(sequence.get_events(channel, t0))
+        return events
+
+    def compute_duration(self):
+        return sum(sequence.compute_duration() for sequence in self.sequences)
+
+    def __repr__(self):
+        return "ParallelSequence(%s)" % ", ".join((["name=%s" % self.name] if self.name else [])
+                                                  + list(map(repr, self.sequences)))
 
 class Tie(Sequence):
     def __init__(self, *notes, **kwargs):
